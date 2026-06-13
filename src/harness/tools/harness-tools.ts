@@ -6,13 +6,12 @@ import { buildSearchQuery } from "./query-builder";
 import { lookupSymptomFromText } from "./symptom-index";
 import {
   isWebSearchOffline,
+  MAX_WEB_SEARCHES_PER_DIAGNOSIS,
   searchWeb,
 } from "./web-search";
 import { lookupVin } from "./vin";
 import type { DiagnosisInput, ProgressEvent, WebSearchResponse } from "../types";
 import type { MaterialSnapshot } from "../material/store";
-
-const MAX_WEB_SEARCHES = 2;
 
 export function buildHarnessTools(params: {
   input: DiagnosisInput;
@@ -22,6 +21,11 @@ export function buildHarnessTools(params: {
 }): { tools: Record<string, unknown>; contextJson: string; webSearchCount: () => number } {
   let webSearchCount = 0;
   const webSearchResults: WebSearchResponse[] = [];
+  const harnessUsed = params.material.harnessWebSearchesUsed ?? 0;
+  const agentSearchBudget = Math.max(0, MAX_WEB_SEARCHES_PER_DIAGNOSIS - harnessUsed);
+  const unfoundDtcCodes = params.material.contextPack.dtcs
+    .filter((d) => !d.found)
+    .map((d) => d.code);
 
   const searchContext = {
     symptoms: params.input.symptoms,
@@ -75,18 +79,25 @@ export function buildHarnessTools(params: {
       },
     }),
     searchWeb: tool({
-      description:
-        "Search trusted automotive domains for diagnostic info. Max 2 calls per diagnosis. Use only when bundled KB is insufficient.",
+      description: `Search trusted automotive domains for diagnostic info. Max ${agentSearchBudget} additional call(s) per diagnosis after harness prefetch. Use only when bundled KB and prefetch search are insufficient.`,
       inputSchema: z.object({
         query: z.string().describe("Automotive diagnostic search query"),
       }),
       execute: async ({ query }) => {
-        if (webSearchCount >= MAX_WEB_SEARCHES) {
+        if (agentSearchBudget === 0) {
           return {
             query,
             results: [],
             offlineMode: true,
-            error: "Web search limit reached for this diagnosis (max 2).",
+            error: "Web search limit reached for this diagnosis (harness already used the search budget).",
+          };
+        }
+        if (webSearchCount >= agentSearchBudget) {
+          return {
+            query,
+            results: [],
+            offlineMode: true,
+            error: `Web search limit reached for this diagnosis (max ${agentSearchBudget} agent search(es)).`,
           };
         }
         webSearchCount += 1;
@@ -120,6 +131,9 @@ export function buildHarnessTools(params: {
       ...params.material.contextPack,
       suggestedSearchQuery: buildSearchQuery(searchContext),
       webSearchOffline: isWebSearchOffline(),
+      unfoundDtcCodes,
+      missingDtcWebResults: params.material.missingDtcWebResults ?? null,
+      harnessWebSearchesUsed: harnessUsed,
       humanAnswers: params.material.input.mileage
         ? { mileage: params.material.input.mileage }
         : undefined,
@@ -131,6 +145,6 @@ export function buildHarnessTools(params: {
   return {
     tools,
     contextJson,
-    webSearchCount: () => webSearchCount,
+    webSearchCount: () => webSearchCount + harnessUsed,
   };
 }

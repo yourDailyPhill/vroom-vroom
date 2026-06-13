@@ -1,7 +1,15 @@
 import type { DiagnosisOutput } from "../guardrails/schema";
+import type { ToolLogger } from "../agents/interface";
 import { buildContextPack } from "../prefetch";
 import { buildSearchQuery } from "../tools/query-builder";
-import type { ContextPack, DiagnosisInput } from "../types";
+import { resolveMissingDtcsViaWeb } from "../tools/resolve-missing-dtcs";
+import type {
+  ContextPack,
+  DiagnosisInput,
+  ProgressEvent,
+  VinDecodeResult,
+  WebSearchResponse,
+} from "../types";
 
 export interface MaterialSnapshot {
   input: DiagnosisInput;
@@ -9,6 +17,8 @@ export interface MaterialSnapshot {
   investigationNotes?: string;
   draft?: DiagnosisOutput;
   suggestedSearchQuery?: string;
+  missingDtcWebResults?: WebSearchResponse;
+  harnessWebSearchesUsed?: number;
 }
 
 export class MaterialStore {
@@ -17,6 +27,8 @@ export class MaterialStore {
   private investigationNotes?: string;
   private draft?: DiagnosisOutput;
   private suggestedSearchQuery?: string;
+  private missingDtcWebResults?: WebSearchResponse;
+  private harnessWebSearchesUsed = 0;
 
   constructor(input: DiagnosisInput) {
     this.input = input;
@@ -30,6 +42,34 @@ export class MaterialStore {
       vehicle: this.contextPack.vehicle,
     });
     return this.contextPack;
+  }
+
+  async enrichMissingDtcs(params: {
+    toolLogger: ToolLogger;
+    emitProgress: (event: ProgressEvent) => void;
+    vehicle?: VinDecodeResult;
+  }): Promise<void> {
+    if (this.missingDtcWebResults) {
+      return;
+    }
+
+    const contextPack = this.getContextPack();
+    const unfoundCodes = contextPack.dtcs.filter((d) => !d.found).map((d) => d.code);
+    if (unfoundCodes.length === 0) {
+      return;
+    }
+
+    const { results, searchesUsed } = await resolveMissingDtcsViaWeb({
+      unfoundCodes,
+      vehicle: params.vehicle,
+      toolLogger: params.toolLogger,
+      emitProgress: params.emitProgress,
+    });
+
+    this.harnessWebSearchesUsed = searchesUsed;
+    if (results) {
+      this.missingDtcWebResults = results;
+    }
   }
 
   setNotes(notes: string): void {
@@ -58,6 +98,8 @@ export class MaterialStore {
       investigationNotes: this.investigationNotes,
       draft: this.draft,
       suggestedSearchQuery: this.suggestedSearchQuery,
+      missingDtcWebResults: this.missingDtcWebResults,
+      harnessWebSearchesUsed: this.harnessWebSearchesUsed,
     };
   }
 
@@ -67,5 +109,7 @@ export class MaterialStore {
     this.investigationNotes = snapshot.investigationNotes;
     this.draft = snapshot.draft;
     this.suggestedSearchQuery = snapshot.suggestedSearchQuery;
+    this.missingDtcWebResults = snapshot.missingDtcWebResults;
+    this.harnessWebSearchesUsed = snapshot.harnessWebSearchesUsed ?? 0;
   }
 }
