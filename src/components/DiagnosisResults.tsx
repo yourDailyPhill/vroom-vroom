@@ -1,7 +1,7 @@
 "use client";
 
 import type { DiagnosisOutput } from "@/harness/guardrails/schema";
-import type { DiagnosisOutcome, DiagnosisTrace, TraceEntry } from "@/harness/types";
+import type { DiagnosisOutcome, DiagnosisTrace, HarnessAlarm, TraceEntry } from "@/harness/types";
 
 function confidenceBadge(confidence: DiagnosisOutput["confidence"]) {
   const styles = {
@@ -38,6 +38,13 @@ export function DiagnosisResults({
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           This request was blocked by safety guardrails. Professional guidance is recommended
           for the topic you described.
+        </div>
+      )}
+
+      {outcome === "awaiting_human" && (
+        <div className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-3 text-sm text-violet-950">
+          The harness needs more information before it can produce a reliable diagnosis.
+          Answer the follow-up questions below and continue.
         </div>
       )}
 
@@ -146,6 +153,10 @@ export function TracePanel({
             <dd className="font-mono truncate">{trace.requestId}</dd>
           </div>
           <div>
+            <dt className="font-semibold">Agent</dt>
+            <dd>{trace.agentName}</dd>
+          </div>
+          <div>
             <dt className="font-semibold">Model</dt>
             <dd>{trace.modelId}</dd>
           </div>
@@ -158,6 +169,30 @@ export function TracePanel({
             <dd>{trace.offlineMode ? "Offline KB" : "Online"}</dd>
           </div>
         </dl>
+        {trace.checkpointResults.length > 0 && (
+          <div className="mb-3 text-xs">
+            <p className="font-semibold text-zinc-700 mb-1">Checkpoints</p>
+            <ul className="space-y-1">
+              {trace.checkpointResults.map((cp) => (
+                <li key={cp.checkpointId} className={cp.passed ? "text-emerald-700" : "text-red-700"}>
+                  {cp.checkpointId}: {cp.passed ? "PASS" : `FAIL (${cp.failures.join("; ")})`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {trace.alarms.length > 0 && (
+          <div className="mb-3 text-xs">
+            <p className="font-semibold text-zinc-700 mb-1">Alarms</p>
+            <ul className="space-y-1">
+              {trace.alarms.map((alarm: HarnessAlarm, i) => (
+                <li key={`${alarm.type}-${i}`} className="text-amber-900">
+                  [{alarm.severity}] {alarm.type}: {alarm.recommendedAction}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {trace.guardrailHits.length > 0 && outcome !== "service_unavailable" && (
           <p className="mb-3 text-xs text-red-700">
             Guardrail hits: {trace.guardrailHits.join("; ")}

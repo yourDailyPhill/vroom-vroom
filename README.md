@@ -66,6 +66,7 @@ Edit `.env.local` and set your API keys:
 | `GEMINI_API_KEY` | Yes      | [Google AI Studio](https://aistudio.google.com/apikey)         |
 | `TAVILY_API_KEY` | No       | [Tavily](https://tavily.com) — omit for offline knowledge only |
 | `GEMINI_MODEL`   | No       | Defaults to `gemini-2.5-flash-lite`                            |
+| `DIAGNOSTIC_AGENT` | No     | `tool-calling` (default) or `single-pass` — see [HARNESS.md](HARNESS.md) |
 
 
 Restart the dev server after editing `.env.local`.
@@ -99,25 +100,29 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Architecture
 
-Vroom Vroom is organized around four pillars — the core requirements of a production AI harness:
+Vroom Vroom is an **AI harness** — not a chatbot. It follows the [Fired Festival four-pillar model](https://fired-festival.com/harness): **Loop**, **Tools**, **Guardrails**, and **Observability**. A pluggable diagnostic agent (worker) runs inside the loop. Full design: **[HARNESS.md](HARNESS.md)**.
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│    LOOP     │ →  │    TOOLS    │ →  │ GUARDRAILS  │ →  │ OBSERVABILITY│
-│ Agent w/    │    │ Domain-     │    │ Safety      │    │ Structured  │
-│ tool calls  │    │ locked      │    │ validation  │    │ logs + trace│
+│    LOOP     │ →  │    TOOLS    │ →  │ GUARDRAILS  │ →  │OBSERVABILITY│
+│ Orchestrator│    │ Domain-     │    │ Declared    │    │ Trace, logs,│
+│ + checkpoints│   │ locked      │    │ safety rules│    │ alarms      │
 └─────────────┘    │ search      │    └─────────────┘    └─────────────┘
                    └─────────────┘
+                            │
+                            ▼
+                 Swappable DiagnosticAgent
+                (tool-calling · single-pass · …)
 ```
 
+| Pillar | What it does |
+|--------|--------------|
+| **Loop** | Orchestrates the run — checkpoints, material handoff, agent feedback, swappable workers |
+| **Tools** | Bundled DTC KB → NHTSA VIN → Tavily search (trusted domains only) |
+| **Guardrails** | Declared input/output rules — blocklist, Zod schema, confidence floor, safe rewrite |
+| **Observability** | JSON logs, live trace panel, structured alarms, checkpoint pass/fail in UI |
 
-| Pillar            | What it does                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------- |
-| **Loop**          | Constrained agent loop — max 5 tool rounds, 60s timeout, 2 web searches per diagnosis         |
-| **Tools**         | Three-layer search: bundled DTC KB → NHTSA VIN decode → Tavily live search (domain allowlist) |
-| **Guardrails**    | System prompt rules · Zod schema · regex blocklist · safe-rewrite fallback                    |
-| **Observability** | JSON logs to Vercel + collapsible trace panel in the UI                                       |
-
+**Swappable agents:** set `DIAGNOSTIC_AGENT=single-pass` or pass `?agent=single-pass` on `/diagnose` — the loop and other pillars do not change.
 
 **Full request pipeline**
 
@@ -125,22 +130,22 @@ Vroom Vroom is organized around four pillars — the core requirements of a prod
 User Input (symptoms, VIN, DTCs)
         │
         ▼
-  Input Validation
+  Loop: input_valid checkpoint + Guardrails
         │
         ▼
-  Domain-Locked Search Core
-   ├── NHTSA VIN decode
-   ├── Bundled DTC / symptom KB
-   └── Tavily web search (trusted domains only)
+  Tools: prefetch (NHTSA · DTC KB · symptoms)
         │
         ▼
-  AI Processing Loop (Gemini Flash)
+  Loop: material_ready checkpoint ──→ HITL if insufficient context
         │
         ▼
-  Guardrail Validator ──→ fail? ──→ safe rewrite
+  DiagnosticAgent.execute()  ← swappable worker
         │
         ▼
-  DIAGNOSIS.md  (download)
+  Loop: output_safe + Guardrails ──→ feedback.rewrite to agent
+        │
+        ▼
+  Observability: trace + alarms ──► DIAGNOSIS.md (download)
 ```
 
 ---
@@ -148,15 +153,15 @@ User Input (symptoms, VIN, DTCs)
 ## Tech stack
 
 
-| Layer      | Choice                                                                           | Cost      |
-| ---------- | -------------------------------------------------------------------------------- | --------- |
-| Hosting    | [Vercel Hobby](https://vercel.com)                                               | Free      |
-| Framework  | [Next.js 15](https://nextjs.org) + TypeScript                                    | Free      |
-| LLM        | [Gemini Flash](https://ai.google.dev) via [Vercel AI SDK](https://sdk.vercel.ai) | Free tier |
-| VIN decode | [NHTSA vPIC API](https://vpic.nhtsa.dot.gov/api/)                                | Free      |
-| Knowledge  | Bundled OBD-II DTC + symptom JSON                                                | Free      |
-| Web search | [Tavily](https://tavily.com) with domain allowlist                               | Free tier |
-| Export     | Client-side `DIAGNOSIS.md` download                                              | Free      |
+| Layer      | Choice                                             | Cost      |
+| ---------- | -------------------------------------------------- | --------- |
+| Hosting    | [Vercel Hobby](https://vercel.com)                 | Free      |
+| Framework  | [Next.js 15](https://nextjs.org) + TypeScript      | Free      |
+| LLM        | [Gemini Flash](https://ai.google.dev)              | Free tier |
+| VIN decode | [NHTSA vPIC API](https://vpic.nhtsa.dot.gov/api/)  | Free      |
+| Knowledge  | Bundled OBD-II DTC + symptom JSON                  | Free      |
+| Web search | [Tavily](https://tavily.com) with domain allowlist | Free tier |
+| Export     | Client-side `DIAGNOSIS.md` download                | Free      |
 
 
 **Built with care for people who just want their car to vroom again.**
