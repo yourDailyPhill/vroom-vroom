@@ -36,6 +36,67 @@ Built for **non-professionals** working on **traditional ICE vehicles** (gasolin
 
 ---
 
+## Run locally
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) **20+**
+- npm (bundled with Node)
+- A clone of this repo
+
+### Install
+
+```bash
+git clone https://github.com/yourDailyPhill/vroom-vroom.git
+cd vroom-vroom
+npm install
+```
+
+### Environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and set your API keys:
+
+
+| Variable         | Required | Notes                                                          |
+| ---------------- | -------- | -------------------------------------------------------------- |
+| `GEMINI_API_KEY` | Yes      | [Google AI Studio](https://aistudio.google.com/apikey)         |
+| `TAVILY_API_KEY` | No       | [Tavily](https://tavily.com) — omit for offline knowledge only |
+| `GEMINI_MODEL`   | No       | Defaults to `gemini-2.5-flash-lite`                            |
+
+
+Restart the dev server after editing `.env.local`.
+
+### Start dev server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Try it
+
+1. Enter symptoms (and optionally VIN / DTC codes) on the home page
+2. Submit to run the harness
+3. View the trace panel on `/diagnose` and download `DIAGNOSIS.md`
+
+### Other scripts
+
+- `npm run build` — production build
+- `npm run start` — serve production build locally (run `build` first)
+- `npm run lint` — ESLint
+
+### Troubleshooting
+
+- **Missing `GEMINI_API_KEY`** — diagnosis will fail; check `.env.local` and restart `npm run dev`
+- **No `TAVILY_API_KEY`** — app still works; live web search is disabled and offline knowledge is used instead
+
+---
+
 ## Architecture
 
 Vroom Vroom is organized around four pillars — the core requirements of a production AI harness:
@@ -82,10 +143,6 @@ User Input (symptoms, VIN, DTCs)
   DIAGNOSIS.md  (download)
 ```
 
-
-
-> 📄 Architecture defense and UI mockups live in `docs/` (coming soon).
-
 ---
 
 ## Tech stack
@@ -102,9 +159,6 @@ User Input (symptoms, VIN, DTCs)
 | Export     | Client-side `DIAGNOSIS.md` download                                              | Free      |
 
 
-
-
 **Built with care for people who just want their car to vroom again.**
 
 *Traditional ICE vehicles only · Guardrails always on · Zero budget by design*
-
