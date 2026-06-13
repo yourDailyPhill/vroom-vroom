@@ -174,7 +174,10 @@ export function TracePanel({
             <p className="font-semibold text-zinc-700 mb-1">Checkpoints</p>
             <ul className="space-y-1">
               {trace.checkpointResults.map((cp) => (
-                <li key={cp.checkpointId} className={cp.passed ? "text-emerald-700" : "text-red-700"}>
+                <li
+                  key={`${cp.checkpointId}-${cp.timestamp}`}
+                  className={cp.passed ? "text-emerald-700" : "text-red-700"}
+                >
                   {cp.checkpointId}: {cp.passed ? "PASS" : `FAIL (${cp.failures.join("; ")})`}
                 </li>
               ))}

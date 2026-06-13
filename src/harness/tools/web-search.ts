@@ -2,6 +2,8 @@ import { tavily } from "@tavily/core";
 import trustedDomains from "@/knowledge/trusted-domains.json";
 import type { WebSearchResponse } from "../types";
 
+export const MAX_WEB_SEARCHES_PER_DIAGNOSIS = 2;
+
 const MAX_RESULTS = 5;
 
 let offlineMode = false;

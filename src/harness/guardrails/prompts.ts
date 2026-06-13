@@ -52,5 +52,5 @@ ${params.mileage ? `Mileage: ${params.mileage}` : ""}
 Pre-fetched context (use this first):
 ${params.contextJson}
 
-If bundled knowledge is insufficient for obscure codes, use searchWeb (max 2 searches). Synthesize a practical DIY diagnosis.`;
+If missingDtcWebResults is present in context, use those snippets as the primary source for unfound codes. Only cite URLs from web search results. If bundled knowledge is still insufficient, use searchWeb for any remaining gaps. Synthesize a practical DIY diagnosis.`;
 }

@@ -11,12 +11,12 @@ For product overview and local setup, see [README.md](README.md).
 Vroom Vroom follows the [Fired Festival harness model](https://fired-festival.com/harness): **Loop**, **Tools**, **Guardrails**, and **Observability**. Each pillar is a distinct, identifiable layer in the code — separate from swappable workers in `agents/`.
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│    LOOP     │ →  │    TOOLS    │ →  │ GUARDRAILS  │ →  │OBSERVABILITY│
-│ Orchestrator│    │ Domain-     │    │ Declared    │    │ Trace, logs,│
-│ + checkpoints│   │ locked      │    │ safety rules│    │ alarms      │
-│ + material  │    │ search      │    │ + validation│    │ + checkpoints│
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+┌────────────-─┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────-┐
+│    LOOP      │ →  │    TOOLS    │ →  │ GUARDRAILS  │ →  │OBSERVABILITY │
+│ Orchestrator │    │ Domain-     │    │ Declared    │    │ Trace, logs, │
+│ + checkpoints│    │ locked      │    │ safety rules│    │ alarms       │
+│ + material   │    │ search      │    │ + validation│    │ + checkpoints│
+└─────────────-┘    └─────────────┘    └─────────────┘    └─────────────-┘
          │                  │                  │                  │
          └──────────────────┴──────────────────┴──────────────────┘
                                     │
@@ -157,9 +157,13 @@ Agents receive a read-only snapshot. Only the loop mutates material via `setNote
 
 Domain tools live in [`tools/`](src/harness/tools/) — bundled DTC KB, NHTSA VIN decode, symptom index, Tavily web search (domain allowlist).
 
-The loop builds a [`HarnessToolRegistry`](src/harness/tools/harness-tools.ts) and passes it to agents. Tools are infrastructure the loop controls (max 2 web searches, offline fallback); agents call them during investigation but do not define or configure them.
+The loop builds a [`HarnessToolRegistry`](src/harness/tools/harness-tools.ts) and passes it to agents. Tools are infrastructure the loop controls (shared 2-search budget per diagnosis, offline fallback); agents call them during investigation but do not define or configure them.
 
 Prefetch ([`prefetch.ts`](src/harness/prefetch.ts)) runs before the agent loop to warm the material store with KB hits.
+
+**Missing DTC resolution:** The bundled KB is curated, not exhaustive (e.g. P0303 may be absent). When prefetch finds DTC codes not in the KB, the loop automatically runs one combined web search via [`resolve-missing-dtcs.ts`](src/harness/tools/resolve-missing-dtcs.ts) before the agent executes. Results are stored in `missingDtcWebResults` on the material snapshot and included in agent context. This uses 1 slot of the shared 2-search-per-diagnosis budget.
+
+**Trusted domains** ([`trusted-domains.json`](src/knowledge/trusted-domains.json)) include repair sites, OBD code references, and other trusted knowledge sites.
 
 ---
 

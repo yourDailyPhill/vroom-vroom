@@ -224,6 +224,16 @@ export async function runHarness(
       );
     }
 
+    const unfoundCodes = contextPack.dtcs.filter((d) => !d.found).map((d) => d.code);
+    if (unfoundCodes.length > 0) {
+      emitStatus(`Searching trusted sources for ${unfoundCodes.join(", ")}…`);
+      await materialStore.enrichMissingDtcs({
+        toolLogger: logger,
+        emitProgress: (event) => onProgress?.(event),
+        vehicle: contextPack.vehicle,
+      });
+    }
+
     completedStages.push("prefetch");
 
     const { result: materialCheckpoint, escalation } = recordCheckpoint(
@@ -263,8 +273,17 @@ export async function runHarness(
     }
   } else {
     materialStore = new MaterialStore(input);
-    await materialStore.prefetch();
-    vehicleLabel = formatVehicleLabel(materialStore.getContextPack());
+    const contextPack = await materialStore.prefetch();
+    vehicleLabel = formatVehicleLabel(contextPack);
+    const unfoundCodes = contextPack.dtcs.filter((d) => !d.found).map((d) => d.code);
+    if (unfoundCodes.length > 0) {
+      emitStatus(`Searching trusted sources for ${unfoundCodes.join(", ")}…`);
+      await materialStore.enrichMissingDtcs({
+        toolLogger: logger,
+        emitProgress: (event) => onProgress?.(event),
+        vehicle: contextPack.vehicle,
+      });
+    }
   }
 
   // --- Stage: agent execution ---
