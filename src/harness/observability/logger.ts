@@ -1,8 +1,12 @@
+import type { HarnessAlarm } from "../alarms/types";
+import type { CheckpointResult } from "../checkpoints/definitions";
 import type { DiagnosisOutcome, DiagnosisTrace, TraceEntry } from "../types";
 import { DEFAULT_GEMINI_MODEL } from "../config/model";
 
 export interface StructuredLog {
   requestId: string;
+  agentId: string;
+  agentName: string;
   vin?: string;
   dtcs: string[];
   symptoms: string;
@@ -10,6 +14,8 @@ export interface StructuredLog {
   webSearches: Array<{ query: string; resultCount: number; offline: boolean }>;
   loopIterations: number;
   guardrailHits: string[];
+  checkpointResults: CheckpointResult[];
+  alarms: HarnessAlarm[];
   latencyMs: number;
   modelId: string;
   offlineMode: boolean;
@@ -23,11 +29,15 @@ export class DiagnosisLogger {
   private toolCallCount = 0;
   private webSearchCount = 0;
   private guardrailHits: string[] = [];
+  private checkpointResults: CheckpointResult[] = [];
+  private alarms: HarnessAlarm[] = [];
   private loopIterations = 0;
   private startTime = Date.now();
   private vin?: string;
   private dtcs: string[] = [];
   private symptoms = "";
+  private agentId = "unknown";
+  private agentName = "unknown";
   private modelId = DEFAULT_GEMINI_MODEL;
   private offlineMode = false;
   private onTrace?: (entry: TraceEntry) => void;
@@ -38,6 +48,11 @@ export class DiagnosisLogger {
   ) {
     this.requestId = requestId;
     this.onTrace = options?.onTrace;
+  }
+
+  setAgent(agentId: string, agentName: string): void {
+    this.agentId = agentId;
+    this.agentName = agentName;
   }
 
   setInput(params: {
@@ -81,6 +96,24 @@ export class DiagnosisLogger {
     this.addEntry({ type: "guardrail", name: "validator", detail: hit });
   }
 
+  checkpoint(result: CheckpointResult): void {
+    this.checkpointResults.push(result);
+    this.addEntry({
+      type: "checkpoint",
+      name: result.checkpointId,
+      detail: result.passed ? "PASS" : `FAIL: ${result.failures.join("; ")}`,
+    });
+  }
+
+  alarm(alarm: HarnessAlarm): void {
+    this.alarms.push(alarm);
+    this.addEntry({
+      type: "alarm",
+      name: alarm.type,
+      detail: alarm.recommendedAction,
+    });
+  }
+
   iteration(count: number): void {
     this.loopIterations = count;
   }
@@ -101,10 +134,14 @@ export class DiagnosisLogger {
   buildTrace(): DiagnosisTrace {
     return {
       requestId: this.requestId,
+      agentId: this.agentId,
+      agentName: this.agentName,
       entries: this.entries,
       toolCallCount: this.toolCallCount,
       webSearchCount: this.webSearchCount,
       guardrailHits: this.guardrailHits,
+      checkpointResults: this.checkpointResults,
+      alarms: this.alarms,
       loopIterations: this.loopIterations,
       latencyMs: Date.now() - this.startTime,
       modelId: this.modelId,
@@ -116,6 +153,8 @@ export class DiagnosisLogger {
     const trace = this.buildTrace();
     const log: StructuredLog = {
       requestId: this.requestId,
+      agentId: this.agentId,
+      agentName: this.agentName,
       vin: this.vin,
       dtcs: this.dtcs,
       symptoms: this.symptoms,
@@ -135,6 +174,8 @@ export class DiagnosisLogger {
         })),
       loopIterations: trace.loopIterations,
       guardrailHits: trace.guardrailHits,
+      checkpointResults: trace.checkpointResults,
+      alarms: trace.alarms,
       latencyMs: trace.latencyMs,
       modelId: trace.modelId,
       offlineMode: trace.offlineMode,

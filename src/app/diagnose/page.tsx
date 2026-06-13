@@ -10,11 +10,23 @@ import {
   TracePanel,
 } from "@/components/DiagnosisResults";
 import type { DiagnosisOutput } from "@/harness/guardrails/schema";
-import type { DiagnosisOutcome, DiagnosisTrace, TraceEntry } from "@/harness/types";
+import type {
+  DiagnosisOutcome,
+  DiagnosisTrace,
+  HarnessAlarm,
+  HumanEscalation,
+  TraceEntry,
+} from "@/harness/types";
 
 type StreamState =
   | { phase: "loading" }
-  | { phase: "streaming"; status: string; trace: TraceEntry[]; offlineBanner?: string }
+  | {
+      phase: "streaming";
+      status: string;
+      trace: TraceEntry[];
+      offlineBanner?: string;
+      alarms: HarnessAlarm[];
+    }
   | {
       phase: "complete";
       diagnosis: DiagnosisOutput;
@@ -22,8 +34,107 @@ type StreamState =
       trace: DiagnosisTrace;
       outcome: DiagnosisOutcome;
       offlineBanner?: string;
+      requestId: string;
+    }
+  | {
+      phase: "escalation";
+      escalation: HumanEscalation;
+      requestId: string;
+      trace: TraceEntry[];
+      alarms: HarnessAlarm[];
+      answers: Record<string, string>;
     }
   | { phase: "error"; message: string };
+
+function readAgentFromUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return new URLSearchParams(window.location.search).get("agent") ?? undefined;
+}
+
+async function consumeSseStream(
+  response: Response,
+  handlers: {
+    onStatus: (message: string) => void;
+    onTrace: (entry: TraceEntry) => void;
+    onOffline: (message: string) => void;
+    onAlarm: (alarm: HarnessAlarm) => void;
+    onEscalation: (escalation: HumanEscalation, requestId: string) => void;
+    onComplete: (payload: {
+      diagnosis: DiagnosisOutput;
+      markdown: string;
+      trace: DiagnosisTrace;
+      outcome: DiagnosisOutcome;
+      requestId: string;
+    }) => void;
+  },
+): Promise<void> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response stream");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith("data: ")) continue;
+
+      const payload = JSON.parse(line.slice(6)) as {
+        type: string;
+        message?: string;
+        entry?: TraceEntry;
+        alarm?: HarnessAlarm;
+        escalation?: HumanEscalation;
+        requestId?: string;
+        diagnosis?: DiagnosisOutput;
+        markdown?: string;
+        trace?: DiagnosisTrace;
+        outcome?: DiagnosisOutcome;
+      };
+
+      if (payload.type === "status" && payload.message) {
+        handlers.onStatus(payload.message);
+      }
+      if (payload.type === "offline" && payload.message) {
+        handlers.onOffline(payload.message);
+      }
+      if (payload.type === "trace" && payload.entry) {
+        handlers.onTrace(payload.entry);
+      }
+      if (payload.type === "alarm" && payload.alarm) {
+        handlers.onAlarm(payload.alarm);
+      }
+      if (payload.type === "escalation" && payload.escalation && payload.requestId) {
+        handlers.onEscalation(payload.escalation, payload.requestId);
+      }
+      if (
+        payload.type === "complete" &&
+        payload.diagnosis &&
+        payload.markdown &&
+        payload.trace &&
+        payload.requestId
+      ) {
+        handlers.onComplete({
+          diagnosis: payload.diagnosis,
+          markdown: payload.markdown,
+          trace: payload.trace,
+          outcome: payload.outcome ?? "success",
+          requestId: payload.requestId,
+        });
+      }
+      if (payload.type === "error") {
+        throw new Error(payload.message ?? "Diagnosis failed");
+      }
+    }
+  }
+}
 
 export default function DiagnosePage() {
   const [state, setState] = useState<StreamState>({ phase: "loading" });
@@ -52,16 +163,18 @@ export default function DiagnosePage() {
       }
 
       const traceEntries: TraceEntry[] = [];
+      const alarms: HarnessAlarm[] = [];
       let offlineBanner: string | undefined;
       let currentStatus = "Connecting…";
 
-      setState({ phase: "streaming", status: currentStatus, trace: [] });
+      setState({ phase: "streaming", status: currentStatus, trace: [], alarms: [] });
 
       try {
+        const agent = readAgentFromUrl();
         const response = await fetch("/api/diagnose", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({ ...formData, agent }),
         });
 
         if (!response.ok) {
@@ -69,85 +182,72 @@ export default function DiagnosePage() {
           throw new Error(err.error ?? `HTTP ${response.status}`);
         }
 
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("No response stream");
-
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-
-          for (const part of parts) {
-            const line = part.trim();
-            if (!line.startsWith("data: ")) continue;
-
-            const payload = JSON.parse(line.slice(6)) as {
-              type: string;
-              message?: string;
-              entry?: TraceEntry;
-              diagnosis?: DiagnosisOutput;
-              markdown?: string;
-              trace?: DiagnosisTrace;
-              outcome?: DiagnosisOutcome;
-            };
-
-            if (payload.type === "status" && payload.message) {
-              currentStatus = payload.message;
-              setState({
-                phase: "streaming",
-                status: currentStatus,
-                trace: [...traceEntries],
-                offlineBanner,
-              });
+        await consumeSseStream(response, {
+          onStatus: (message) => {
+            currentStatus = message;
+            setState({
+              phase: "streaming",
+              status: currentStatus,
+              trace: [...traceEntries],
+              offlineBanner,
+              alarms: [...alarms],
+            });
+          },
+          onOffline: (message) => {
+            offlineBanner = message;
+            setState({
+              phase: "streaming",
+              status: currentStatus,
+              trace: [...traceEntries],
+              offlineBanner,
+              alarms: [...alarms],
+            });
+          },
+          onTrace: (entry) => {
+            traceEntries.push(entry);
+            setState({
+              phase: "streaming",
+              status: currentStatus,
+              trace: [...traceEntries],
+              offlineBanner,
+              alarms: [...alarms],
+            });
+          },
+          onAlarm: (alarm) => {
+            alarms.push(alarm);
+            setState({
+              phase: "streaming",
+              status: currentStatus,
+              trace: [...traceEntries],
+              offlineBanner,
+              alarms: [...alarms],
+            });
+          },
+          onEscalation: (escalation, requestId) => {
+            setState({
+              phase: "escalation",
+              escalation,
+              requestId,
+              trace: [...traceEntries],
+              alarms: [...alarms],
+              answers: {},
+            });
+          },
+          onComplete: (payload) => {
+            if (payload.outcome === "awaiting_human") {
+              return;
             }
-
-            if (payload.type === "offline" && payload.message) {
-              offlineBanner = payload.message;
-              setState({
-                phase: "streaming",
-                status: currentStatus,
-                trace: [...traceEntries],
-                offlineBanner,
-              });
-            }
-
-            if (payload.type === "trace" && payload.entry) {
-              traceEntries.push(payload.entry);
-              setState({
-                phase: "streaming",
-                status: currentStatus,
-                trace: [...traceEntries],
-                offlineBanner,
-              });
-            }
-
-            if (
-              payload.type === "complete" &&
-              payload.diagnosis &&
-              payload.markdown &&
-              payload.trace
-            ) {
-              setState({
-                phase: "complete",
-                diagnosis: payload.diagnosis,
-                markdown: payload.markdown,
-                trace: payload.trace,
-                outcome: payload.outcome ?? "success",
-                offlineBanner,
-              });
-            }
-
-            if (payload.type === "error") {
-              throw new Error(payload.message ?? "Diagnosis failed");
-            }
-          }
-        }
+            setState({
+              phase: "complete",
+              diagnosis: payload.diagnosis,
+              markdown: payload.markdown,
+              trace: payload.trace,
+              outcome: payload.outcome,
+              offlineBanner,
+              requestId: payload.requestId,
+            });
+          },
+        });
       } catch (error) {
         setState({
           phase: "error",
@@ -156,6 +256,88 @@ export default function DiagnosePage() {
       }
     })();
   }, []);
+
+  async function submitEscalationAnswers(
+    requestId: string,
+    escalation: HumanEscalation,
+    answers: Record<string, string>,
+    trace: TraceEntry[],
+    alarms: HarnessAlarm[],
+  ) {
+    setState({
+      phase: "streaming",
+      status: "Continuing with your answers…",
+      trace,
+      alarms,
+    });
+
+    try {
+      const agent = readAgentFromUrl();
+      const response = await fetch("/api/diagnose/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId, answers, agent }),
+      });
+
+      if (!response.ok) {
+        const err = (await response.json()) as { error?: string };
+        throw new Error(err.error ?? `HTTP ${response.status}`);
+      }
+
+      const traceEntries = [...trace];
+      const alarmList = [...alarms];
+      let offlineBanner: string | undefined;
+      let currentStatus = "Continuing…";
+
+      await consumeSseStream(response, {
+        onStatus: (message) => {
+          currentStatus = message;
+          setState({
+            phase: "streaming",
+            status: currentStatus,
+            trace: [...traceEntries],
+            offlineBanner,
+            alarms: [...alarmList],
+          });
+        },
+        onOffline: (message) => {
+          offlineBanner = message;
+        },
+        onTrace: (entry) => {
+          traceEntries.push(entry);
+        },
+        onAlarm: (alarm) => {
+          alarmList.push(alarm);
+        },
+        onEscalation: (nextEscalation, nextRequestId) => {
+          setState({
+            phase: "escalation",
+            escalation: nextEscalation,
+            requestId: nextRequestId,
+            trace: [...traceEntries],
+            alarms: [...alarmList],
+            answers: {},
+          });
+        },
+        onComplete: (payload) => {
+          setState({
+            phase: "complete",
+            diagnosis: payload.diagnosis,
+            markdown: payload.markdown,
+            trace: payload.trace,
+            outcome: payload.outcome,
+            offlineBanner,
+            requestId: payload.requestId,
+          });
+        },
+      });
+    } catch (error) {
+      setState({
+        phase: "error",
+        message: error instanceof Error ? error.message : "Continuation failed",
+      });
+    }
+  }
 
   return (
     <div className="min-h-full bg-zinc-100">
@@ -184,6 +366,18 @@ export default function DiagnosePage() {
                 {state.offlineBanner}
               </div>
             )}
+            {state.alarms.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-semibold mb-1">Harness alarms</p>
+                <ul className="space-y-1">
+                  {state.alarms.map((alarm, i) => (
+                    <li key={`${alarm.type}-${i}`}>
+                      [{alarm.severity}] {alarm.recommendedAction}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {state.trace.length > 0 && (
               <details open className="rounded-lg border border-zinc-200 bg-white p-4">
                 <summary className="cursor-pointer text-sm font-semibold text-zinc-700">
@@ -198,6 +392,70 @@ export default function DiagnosePage() {
                 </ul>
               </details>
             )}
+          </div>
+        )}
+
+        {state.phase === "escalation" && (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-3 text-sm text-violet-950">
+              <p className="font-semibold">Harness needs your input</p>
+              <p className="mt-1">{state.escalation.reason}</p>
+            </div>
+            <form
+              className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submitEscalationAnswers(
+                  state.requestId,
+                  state.escalation,
+                  state.answers,
+                  state.trace,
+                  state.alarms,
+                );
+              }}
+            >
+              {state.escalation.questions.map((question, i) => (
+                <div key={question}>
+                  <label className="block text-sm font-semibold text-zinc-800 mb-1">
+                    {question}
+                  </label>
+                  <input
+                    type="text"
+                    value={state.answers[`q${i}`] ?? ""}
+                    onChange={(e) =>
+                      setState({
+                        ...state,
+                        answers: { ...state.answers, [`q${i}`]: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              ))}
+              <button
+                type="submit"
+                className="rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
+              >
+                Continue diagnosis
+              </button>
+            </form>
+            <TracePanel
+              trace={{
+                requestId: state.requestId,
+                agentId: "pending",
+                agentName: "pending",
+                entries: state.trace,
+                toolCallCount: 0,
+                webSearchCount: 0,
+                guardrailHits: [],
+                checkpointResults: [],
+                alarms: state.alarms,
+                loopIterations: 0,
+                latencyMs: 0,
+                modelId: "—",
+                offlineMode: false,
+              }}
+            />
           </div>
         )}
 

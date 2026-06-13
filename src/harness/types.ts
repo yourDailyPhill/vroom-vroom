@@ -1,4 +1,8 @@
+import type { HarnessAlarm } from "./alarms/types";
+import type { CheckpointResult, HumanEscalation } from "./checkpoints/definitions";
 import type { DiagnosisOutput } from "./guardrails/schema";
+
+export type { HarnessAlarm, HumanEscalation };
 
 export interface DiagnosisInput {
   symptoms: string;
@@ -57,7 +61,7 @@ export interface ContextPack {
 
 export interface TraceEntry {
   timestamp: string;
-  type: "tool" | "search" | "guardrail" | "status" | "error";
+  type: "tool" | "search" | "guardrail" | "status" | "error" | "checkpoint" | "alarm";
   name: string;
   detail: string;
   durationMs?: number;
@@ -65,10 +69,14 @@ export interface TraceEntry {
 
 export interface DiagnosisTrace {
   requestId: string;
+  agentId: string;
+  agentName: string;
   entries: TraceEntry[];
   toolCallCount: number;
   webSearchCount: number;
   guardrailHits: string[];
+  checkpointResults: CheckpointResult[];
+  alarms: HarnessAlarm[];
   loopIterations: number;
   latencyMs: number;
   modelId: string;
@@ -78,16 +86,21 @@ export interface DiagnosisTrace {
 export type DiagnosisOutcome =
   | "success"
   | "safety_blocked"
-  | "service_unavailable";
+  | "service_unavailable"
+  | "awaiting_human";
 
 export interface DiagnosisResult {
   diagnosis: DiagnosisOutput;
   markdown: string;
   trace: DiagnosisTrace;
   outcome: DiagnosisOutcome;
+  escalation?: HumanEscalation;
 }
 
 export type ProgressEvent =
   | { type: "status"; message: string }
   | { type: "trace"; entry: TraceEntry }
-  | { type: "offline"; message: string };
+  | { type: "offline"; message: string }
+  | { type: "alarm"; alarm: HarnessAlarm }
+  | { type: "checkpoint"; result: CheckpointResult }
+  | { type: "escalation"; escalation: HumanEscalation; requestId: string };

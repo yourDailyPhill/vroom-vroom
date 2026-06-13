@@ -1,32 +1,14 @@
-import { parseDtcList } from "@/harness/tools/dtc";
+import { CheckpointStore } from "@/harness/checkpoints/store";
 import { resolveAgent } from "@/harness/agents/registry";
 import { runHarness } from "@/harness/core/harness";
-import type { DiagnosisInput } from "@/harness/types";
 import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 300;
 
-interface DiagnoseRequestBody {
-  symptoms?: string;
-  vin?: string;
-  dtcs?: string;
-  mileage?: string;
+interface ContinueRequestBody {
+  requestId?: string;
+  answers?: Record<string, string>;
   agent?: string;
-}
-
-function parseBody(body: DiagnoseRequestBody): DiagnosisInput {
-  const symptoms = body.symptoms?.trim() ?? "";
-  const vin = body.vin?.trim() || undefined;
-  const dtcsFromField = body.dtcs ? parseDtcList(body.dtcs) : [];
-  const dtcsFromSymptoms = parseDtcList(symptoms);
-  const dtcs = [...new Set([...dtcsFromField, ...dtcsFromSymptoms])];
-
-  return {
-    symptoms,
-    vin,
-    dtcs: dtcs.length > 0 ? dtcs : undefined,
-    mileage: body.mileage?.trim() || undefined,
-  };
 }
 
 function createSseStream(
@@ -50,7 +32,7 @@ function createSseStream(
         send({
           type: "error",
           message:
-            error instanceof Error ? error.message : "Diagnosis failed unexpectedly",
+            error instanceof Error ? error.message : "Continuation failed unexpectedly",
         });
       } finally {
         controller.close();
@@ -68,22 +50,32 @@ function createSseStream(
 }
 
 export async function POST(request: Request) {
-  let body: DiagnoseRequestBody;
+  let body: ContinueRequestBody;
   try {
-    body = (await request.json()) as DiagnoseRequestBody;
+    body = (await request.json()) as ContinueRequestBody;
   } catch {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const input = parseBody(body);
-  if (!input.symptoms) {
-    return Response.json({ error: "Symptoms description is required" }, { status: 400 });
+  if (!body.requestId) {
+    return Response.json({ error: "requestId is required" }, { status: 400 });
   }
 
-  const requestId = uuidv4();
+  if (!body.answers || Object.keys(body.answers).length === 0) {
+    return Response.json({ error: "answers are required" }, { status: 400 });
+  }
+
+  const runState = CheckpointStore.getRun(body.requestId);
+  if (!runState) {
+    return Response.json(
+      { error: "No checkpoint state found for this requestId" },
+      { status: 404 },
+    );
+  }
+
   let agent;
   try {
-    agent = resolveAgent(body.agent);
+    agent = resolveAgent(body.agent ?? runState.agentId);
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid agent" },
@@ -91,14 +83,22 @@ export async function POST(request: Request) {
     );
   }
 
+  const continuationId = uuidv4();
+
   return createSseStream(async (send) => {
     const result = await runHarness(
-      input,
+      runState.input,
       agent,
       (event) => {
         send(event);
       },
-      requestId,
+      continuationId,
+      {
+        replayRequestId: body.requestId,
+        replayFromCheckpoint: "material_ready",
+        humanAnswers: body.answers,
+        skipStages: ["input_valid"],
+      },
     );
 
     send({
@@ -108,7 +108,8 @@ export async function POST(request: Request) {
       trace: result.trace,
       outcome: result.outcome,
       escalation: result.escalation,
-      requestId,
+      requestId: continuationId,
+      continuedFrom: body.requestId,
     });
   });
 }
