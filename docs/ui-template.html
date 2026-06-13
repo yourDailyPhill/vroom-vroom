@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vroom Vroom — UI Reference</title>
+  <style>
+    :root { --amber: #f59e0b; --dark: #18181b; --muted: #71717a; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f4f5; color: var(--dark); }
+    header { background: var(--dark); color: white; padding: 2rem 1.5rem; }
+    header h1 { margin: 0.25rem 0 0; font-size: 2rem; }
+    .accent { color: var(--amber); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.1em; }
+    main { max-width: 42rem; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card { background: white; border: 1px solid #e4e4e7; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; }
+    label { display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; }
+    textarea, input { width: 100%; padding: 0.75rem; border: 1px solid #d4d4d8; border-radius: 0.5rem; margin-bottom: 1rem; }
+    .notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.875rem; margin: 1rem 0; }
+    button { background: var(--amber); border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+    .pillars { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .pillar { background: white; border: 1px solid #e4e4e7; border-radius: 0.5rem; padding: 1rem; font-size: 0.875rem; }
+    .pillar strong { color: #b45309; }
+    @media print { header { background: white; color: black; } button { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="accent">Automotive AI Diagnostic Harness</p>
+    <h1>🏎️ Vroom Vroom</h1>
+    <p style="color:#a1a1aa;margin-top:0.5rem">Static UI reference — implemented in Next.js at <code>/</code> and <code>/diagnose</code></p>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Start a diagnosis</h2>
+      <label>Symptoms *</label>
+      <textarea rows="4" placeholder="Rough idle, check engine light…"></textarea>
+      <label>VIN (optional)</label>
+      <input placeholder="17-character VIN" />
+      <label>Trouble codes (optional)</label>
+      <input placeholder="P0301, P0420" />
+      <div class="notice"><strong>Safety:</strong> ICE vehicles only. No fuel/airbag/high-voltage DIY work.</div>
+      <button>Run diagnosis →</button>
+    </div>
+    <div class="pillars">
+      <div class="pillar"><strong>Loop</strong><br/>Max 5 tool rounds, 60s, 2 searches</div>
+      <div class="pillar"><strong>Tools</strong><br/>KB → NHTSA → Tavily allowlist</div>
+      <div class="pillar"><strong>Guardrails</strong><br/>Zod + blocklist + rewrite</div>
+      <div class="pillar"><strong>Observability</strong><br/>JSON logs + trace panel</div>
+    </div>
+  </main>
+</body>
+</html>

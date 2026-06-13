@@ -1,0 +1,196 @@
+{
+  "P0300": {
+    "code": "P0300",
+    "description": "Random/Multiple Cylinder Misfire Detected",
+    "typicalCauses": [
+      "Worn spark plugs or ignition coils",
+      "Vacuum leak",
+      "Low fuel pressure",
+      "Faulty MAF sensor"
+    ],
+    "diyChecks": [
+      "Scan for additional cylinder-specific misfire codes (P0301–P0312)",
+      "Inspect spark plug condition and coil boots for carbon tracking",
+      "Check for vacuum leaks with engine running (hissing, unmetered air)",
+      "Verify fuel trim readings with a scan tool (short/long term fuel trim)"
+    ],
+    "safetyNotes": [
+      "Do not touch ignition components while engine is running",
+      "Allow engine to cool before removing spark plugs"
+    ]
+  },
+  "P0301": {
+    "code": "P0301",
+    "description": "Cylinder 1 Misfire Detected",
+    "typicalCauses": [
+      "Failed ignition coil on cylinder 1",
+      "Worn or fouled spark plug on cylinder 1",
+      "Low compression on cylinder 1",
+      "Injector fault on cylinder 1"
+    ],
+    "diyChecks": [
+      "Swap cylinder 1 coil/plug with another cylinder; recheck if misfire follows",
+      "Inspect plug electrode gap and fouling",
+      "Check coil connector and wiring for corrosion",
+      "Use a scan tool to monitor misfire counts while idling"
+    ],
+    "safetyNotes": [
+      "Disconnect battery before unplugging coils if manufacturer recommends",
+      "Engine and exhaust components are hot after driving"
+    ]
+  },
+  "P0420": {
+    "code": "P0420",
+    "description": "Catalyst System Efficiency Below Threshold (Bank 1)",
+    "typicalCauses": [
+      "Aging or failed catalytic converter",
+      "Exhaust leak upstream of O2 sensors",
+      "Faulty downstream oxygen sensor",
+      "Engine running rich or misfiring (root cause)"
+    ],
+    "diyChecks": [
+      "Verify no exhaust leaks between engine and catalytic converter",
+      "Check upstream/downstream O2 sensor voltage patterns with scan tool",
+      "Address any misfire or fuel trim codes first",
+      "Inspect for blue/white smoke indicating oil or coolant consumption"
+    ],
+    "safetyNotes": [
+      "Catalytic converter and exhaust pipes reach extreme temperatures",
+      "Do not work on exhaust until fully cooled"
+    ]
+  },
+  "P0171": {
+    "code": "P0171",
+    "description": "System Too Lean (Bank 1)",
+    "typicalCauses": [
+      "Vacuum leak",
+      "Dirty or failing MAF sensor",
+      "Weak fuel pump or clogged filter",
+      "PCV valve stuck open"
+    ],
+    "diyChecks": [
+      "Inspect all vacuum hoses and intake boots for cracks",
+      "Clean MAF sensor with MAF-specific cleaner only",
+      "Check fuel pressure if gauge available (compare to spec)",
+      "Listen for vacuum leaks at idle"
+    ],
+    "safetyNotes": [
+      "Use only MAF cleaner on MAF sensors — carb cleaner damages the sensor",
+      "Fuel system is pressurized — do not open fuel lines without proper procedure"
+    ]
+  },
+  "P0172": {
+    "code": "P0172",
+    "description": "System Too Rich (Bank 1)",
+    "typicalCauses": [
+      "Leaking fuel injector",
+      "Faulty MAF or MAP sensor",
+      "Stuck open purge valve",
+      "Failing O2 sensor"
+    ],
+    "diyChecks": [
+      "Check for black sooty spark plugs indicating rich running",
+      "Inspect EVAP purge valve operation",
+      "Review short/long term fuel trim on scan tool",
+      "Look for fuel odor or wet injectors"
+    ],
+    "safetyNotes": [
+      "Rich conditions can damage catalytic converter — avoid extended driving",
+      "No open flame near fuel vapors"
+    ]
+  },
+  "P0442": {
+    "code": "P0442",
+    "description": "EVAP System Leak Detected (Small Leak)",
+    "typicalCauses": [
+      "Loose or missing gas cap",
+      "Cracked EVAP hose",
+      "Failed purge or vent valve",
+      "Leaking charcoal canister"
+    ],
+    "diyChecks": [
+      "Tighten or replace gas cap; drive several cycles to clear",
+      "Inspect EVAP hoses near tank and charcoal canister",
+      "Check gas cap seal for cracks",
+      "Look for cracked plastic lines under vehicle"
+    ],
+    "safetyNotes": [
+      "EVAP system contains fuel vapors — work in ventilated area, no smoking"
+    ]
+  },
+  "P0128": {
+    "code": "P0128",
+    "description": "Coolant Thermostat Below Regulating Temperature",
+    "typicalCauses": [
+      "Stuck-open thermostat",
+      "Coolant temperature sensor fault",
+      "Low coolant level"
+    ],
+    "diyChecks": [
+      "Verify coolant level when engine is cold",
+      "Monitor coolant temp with scan tool — does it reach operating temp?",
+      "Feel upper radiator hose temperature after warm-up (carefully)",
+      "Check for coolant leaks at hoses and water pump"
+    ],
+    "safetyNotes": [
+      "Never open radiator cap on a hot engine",
+      "Coolant is toxic — keep away from pets"
+    ]
+  },
+  "P0455": {
+    "code": "P0455",
+    "description": "EVAP System Leak Detected (Large Leak)",
+    "typicalCauses": [
+      "Missing or damaged gas cap",
+      "Disconnected EVAP line",
+      "Failed charcoal canister",
+      "Damaged filler neck"
+    ],
+    "diyChecks": [
+      "Inspect gas cap and filler neck seal",
+      "Trace EVAP lines from tank to engine bay",
+      "Check if recent fuel system work left a hose disconnected",
+      "Replace gas cap if seal is worn"
+    ],
+    "safetyNotes": [
+      "Fuel vapors are flammable — no sparks or open flame"
+    ]
+  },
+  "P0401": {
+    "code": "P0401",
+    "description": "EGR Flow Insufficient Detected",
+    "typicalCauses": [
+      "Carbon-clogged EGR valve or passages",
+      "Failed EGR valve",
+      "Faulty EGR position sensor"
+    ],
+    "diyChecks": [
+      "Inspect EGR valve operation with scan tool command if supported",
+      "Check for carbon buildup in EGR passages",
+      "Verify vacuum supply to EGR valve (if vacuum-operated)",
+      "Look for rough idle or ping under load"
+    ],
+    "safetyNotes": [
+      "EGR passages may contain hot exhaust gas residue — engine must be cool"
+    ]
+  },
+  "P0507": {
+    "code": "P0507",
+    "description": "Idle Control System RPM Higher Than Expected",
+    "typicalCauses": [
+      "Vacuum leak",
+      "Dirty throttle body",
+      "Stuck IAC valve",
+      "PCV valve stuck open"
+    ],
+    "diyChecks": [
+      "Clean throttle body with throttle-body-safe cleaner",
+      "Inspect for vacuum leaks at intake manifold",
+      "Check PCV valve — shake and listen for rattle",
+      "Verify no aftermarket intake without proper calibration"
+    ],
+    "safetyNotes": [
+      "Keep hands clear of throttle plate when cleaning with key on"
+    ]
+  }
+}

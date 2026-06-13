@@ -1,0 +1,8 @@
+node_modules
+.next
+out
+
+# Local env files (never commit secrets)
+.env
+.env.local
+.env.*.local

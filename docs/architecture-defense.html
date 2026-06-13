@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vroom Vroom — Architecture Defense</title>
+  <style>
+    @page { size: letter; margin: 0.6in; }
+    body { font-family: Georgia, serif; font-size: 9pt; line-height: 1.35; column-count: 2; column-gap: 1.2rem; margin: 0.6in; }
+    h1 { font-size: 14pt; column-span: all; margin: 0 0 0.25rem; }
+    h2 { font-size: 10pt; margin: 0.75rem 0 0.25rem; break-after: avoid; }
+    p, ul { margin: 0 0 0.35rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+    th, td { border: 1px solid #ccc; padding: 0.2rem 0.35rem; text-align: left; }
+    .subtitle { column-span: all; font-style: italic; color: #555; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Vroom Vroom — Architecture Defense</h1>
+  <p class="subtitle">AI harness for ICE vehicle DIY diagnosis · $0 stack · Vercel Hobby</p>
+
+  <h2>Problem</h2>
+  <p>Raw LLM chat hallucinates TSB numbers, recommends dangerous procedures, and cites unverified forums. Vroom Vroom grounds answers in verifiable data and fails safely when confidence is low.</p>
+
+  <h2>Four Pillars</h2>
+  <table>
+    <tr><th>Pillar</th><th>Role</th></tr>
+    <tr><td>Loop</td><td>Constrained agent: max 5 tool rounds, 60s, 2 web searches</td></tr>
+    <tr><td>Tools</td><td>KB → NHTSA VIN → Tavily (domain allowlist)</td></tr>
+    <tr><td>Guardrails</td><td>Prompt rules, Zod schema, blocklist, safe rewrite</td></tr>
+    <tr><td>Observability</td><td>JSON logs + UI trace panel</td></tr>
+  </table>
+
+  <h2>Key Decisions</h2>
+  <ul>
+    <li><strong>Next.js + TypeScript</strong> — typed tools, streaming API, Vercel deploy</li>
+    <li><strong>Gemini Flash</strong> — free tier; tools do heavy lifting</li>
+    <li><strong>Tavily allowlist</strong> — server-side domain lock</li>
+    <li><strong>Markdown export</strong> — no DB, client-side download</li>
+  </ul>
+
+  <h2>Deliberately Not Built</h2>
+  <ul>
+    <li>Unrestricted web search</li>
+    <li>Paid APIs</li>
+    <li>EV/hybrid HV diagnostics</li>
+    <li>Multi-agent swarms</li>
+  </ul>
+
+  <h2>Tradeoffs</h2>
+  <p>Tavily quota (~500 diagnoses/mo) is the capacity ceiling. Diagnoses degrade to offline KB when exhausted — correct behavior. Flash is less capable than Pro, but tool-grounded reasoning compensates.</p>
+
+  <h2>Conclusion</h2>
+  <p>Vroom Vroom is an AI <em>harness</em>, not a chatbot. Safety, verifiability, and zero cost beat maximal intelligence for untrained users working on their own cars.</p>
+</body>
+</html>

@@ -1,0 +1,138 @@
+[
+  {
+    "keywords": ["crank", "won't start", "wont start", "no start", "cranks but", "turns over"],
+    "title": "Cranks But Won't Start",
+    "checks": [
+      "Verify fuel level and listen for fuel pump prime (2–3 sec hum when key to ON)",
+      "Check for spark at a plug ( insulated pliers, grounded — engine off between tests)",
+      "Scan for immobilizer, security, or crankshaft/camshaft sensor codes",
+      "Inspect battery voltage (12.4V+ resting; drops below 10V while cranking indicates weak battery)"
+    ],
+    "commonCauses": [
+      "Failed fuel pump or relay",
+      "Bad crankshaft position sensor",
+      "No spark (coil, module, or timing sensor)",
+      "Security/immobilizer issue"
+    ],
+    "safetyNotes": [
+      "Do not spray starting fluid into intake unless manufacturer allows — fire risk",
+      "Keep face and hands away from moving belts while cranking"
+    ]
+  },
+  {
+    "keywords": ["rough idle", "idle rough", "shaking at idle", "idle shake", "vibration idle"],
+    "title": "Rough Idle",
+    "checks": [
+      "Scan for misfire codes (P0300 series) and pending codes",
+      "Inspect vacuum lines and PCV system for leaks",
+      "Check air filter and MAF sensor condition",
+      "Monitor idle RPM and fuel trims with scan tool at operating temperature"
+    ],
+    "commonCauses": [
+      "Ignition misfire",
+      "Vacuum leak",
+      "Dirty throttle body or IAC issue",
+      "Failed engine mount (vibration, not always a code)"
+    ],
+    "safetyNotes": [
+      "Keep loose clothing and tools away from belts and fans"
+    ]
+  },
+  {
+    "keywords": ["check engine", "cel", "service engine", "warning light"],
+    "title": "Check Engine Light On",
+    "checks": [
+      "Read all stored and pending codes with OBD-II scanner",
+      "Note if light is steady vs flashing (flashing = active misfire, reduce load immediately)",
+      "Record freeze-frame data if available",
+      "Clear codes only after repair — note which return after drive cycle"
+    ],
+    "commonCauses": [
+      "Emissions-related sensor or catalyst issue",
+      "Misfire or fuel trim problem",
+      "EVAP leak (often gas cap)",
+      "O2 sensor aging"
+    ],
+    "safetyNotes": [
+      "Flashing CEL indicates catalyst-damaging misfire — avoid hard acceleration"
+    ]
+  },
+  {
+    "keywords": ["overheat", "hot", "temperature gauge", "coolant temp", "boiling"],
+    "title": "Engine Overheating",
+    "checks": [
+      "Stop driving if gauge in red zone — pull over safely",
+      "Check coolant level only when engine is cool",
+      "Inspect for visible leaks at radiator, hoses, water pump",
+      "Verify radiator fan operation at operating temperature (engine off if checking blades by hand)"
+    ],
+    "commonCauses": [
+      "Low coolant from leak",
+      "Stuck thermostat",
+      "Failed water pump or radiator fan",
+      "Clogged radiator"
+    ],
+    "safetyNotes": [
+      "Never remove radiator cap on a hot engine — scalding risk",
+      "Do not continue driving with overheating — severe engine damage possible"
+    ]
+  },
+  {
+    "keywords": ["brake", "grinding", "squeal", "soft pedal", "spongy"],
+    "title": "Brake Concerns",
+    "checks": [
+      "Inspect pad thickness through wheel spokes if visible",
+      "Check brake fluid level in master cylinder (vehicle level, cap clean)",
+      "Note if pedal feels soft, hard, or pulsates",
+      "Listen for grinding (metal-on-metal indicates immediate service needed)"
+    ],
+    "commonCauses": [
+      "Worn brake pads",
+      "Low brake fluid from leak or pad wear",
+      "Warped rotors (pulsation)",
+      "Moisture in brake fluid (soft pedal — professional bleed required)"
+    ],
+    "safetyNotes": [
+      "Do not attempt brake hydraulic bleeding without proper training and equipment",
+      "Grinding brakes reduce stopping ability — limit driving until inspected"
+    ]
+  },
+  {
+    "keywords": ["stall", "stalls", "dies", "shuts off", "engine dies"],
+    "title": "Engine Stalling",
+    "checks": [
+      "Scan for codes immediately after stall if possible",
+      "Check for vacuum leaks and dirty throttle body",
+      "Monitor fuel pressure and crankshaft/camshaft sensor data if scan tool supports",
+      "Note if stall happens at idle, deceleration, or under load"
+    ],
+    "commonCauses": [
+      "Idle air control or throttle body carbon",
+      "Failing crankshaft position sensor",
+      "Fuel pump intermittent failure",
+      "Vacuum leak"
+    ],
+    "safetyNotes": [
+      "Stalling in traffic is hazardous — prioritize safe stopping location"
+    ]
+  },
+  {
+    "keywords": ["smoke", "exhaust smoke", "white smoke", "blue smoke", "black smoke"],
+    "title": "Exhaust Smoke",
+    "checks": [
+      "Identify color: blue (oil), white sweet smell (coolant), black (rich fuel)",
+      "Check oil level and coolant level",
+      "Scan for misfire, fuel trim, or catalyst codes",
+      "Note if smoke appears at startup only vs continuous"
+    ],
+    "commonCauses": [
+      "Blue: worn piston rings or valve seals",
+      "White: head gasket or coolant intrusion",
+      "Black: rich fuel mixture or clogged air filter"
+    ],
+    "safetyNotes": [
+      "Exhaust contains CO — diagnose outdoors with ventilation",
+      "Coolant in combustion chamber is serious — avoid extended driving"
+    ]
+  }
+]
